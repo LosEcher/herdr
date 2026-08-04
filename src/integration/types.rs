@@ -110,6 +110,20 @@ pub(crate) struct GrokUninstallResult {
 }
 
 #[derive(Debug)]
+pub(crate) struct ReasonixInstallPaths {
+    pub hook_path: PathBuf,
+    pub settings_path: PathBuf,
+}
+
+#[derive(Debug)]
+pub(crate) struct ReasonixUninstallResult {
+    pub hook_path: PathBuf,
+    pub settings_path: PathBuf,
+    pub removed_hook_file: bool,
+    pub updated_settings: bool,
+}
+
+#[derive(Debug)]
 pub(crate) struct QodercliUninstallResult {
     pub hook_path: PathBuf,
     pub settings_path: PathBuf,

@@ -22,6 +22,9 @@ pub(crate) const GROK_CONFIG_DIR_ENV_VAR: &str = "GROK_CONFIG_DIR";
 /// The grok CLI's own config-home override (documented alongside
 /// `$GROK_HOME/config.toml` and `$GROK_HOME/auth.json`).
 pub(crate) const GROK_HOME_ENV_VAR: &str = "GROK_HOME";
+/// The reasonix CLI's own config-home override
+/// (`<Reasonix home>/settings.json`).
+pub(crate) const REASONIX_HOME_ENV_VAR: &str = "REASONIX_HOME";
 
 pub(crate) fn apply_pane_base_env(cmd: &mut CommandBuilder) {
     cmd.env(crate::api::SOCKET_PATH_ENV_VAR, crate::api::socket_path());
@@ -160,6 +163,29 @@ pub(crate) fn grok_dir() -> io::Result<PathBuf> {
     // The grok CLI honors GROK_HOME as its config home (config.toml,
     // auth.json, hooks/); mirror it so hook installs land where grok looks.
     config_dir_from_env_or_home(GROK_HOME_ENV_VAR, &[".grok"])
+}
+
+pub(crate) fn reasonix_dir() -> io::Result<PathBuf> {
+    // The reasonix CLI honors REASONIX_HOME as its config home (settings.json,
+    // config.toml); mirror it so hook installs land where reasonix looks.
+    // Defaults: ~/.reasonix on macOS/Linux, %AppData%\reasonix on Windows.
+    if let Some(value) = std::env::var_os(REASONIX_HOME_ENV_VAR).filter(|value| !value.is_empty())
+    {
+        return expand_tilde_path(PathBuf::from(value));
+    }
+
+    #[cfg(windows)]
+    {
+        if let Some(app_data) = std::env::var_os("APPDATA").filter(|value| !value.is_empty()) {
+            return Ok(PathBuf::from(app_data).join("reasonix"));
+        }
+        Ok(home_dir()?.join("AppData").join("Roaming").join("reasonix"))
+    }
+
+    #[cfg(not(windows))]
+    {
+        Ok(home_dir()?.join(".reasonix"))
+    }
 }
 
 pub(crate) fn home_dir() -> io::Result<PathBuf> {

@@ -140,6 +140,7 @@ impl AgentSoundOverrides {
             Some(Agent::Kilo) => self.kilo,
             Some(Agent::Qodercli) => self.qodercli,
             Some(Agent::Maki) => self.maki,
+            Some(Agent::Reasonix) => AgentSoundSetting::Default,
             None => AgentSoundSetting::Default,
         }
     }

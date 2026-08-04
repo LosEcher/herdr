@@ -4,6 +4,7 @@ mod command;
 mod config_edit;
 mod env;
 mod file_ops;
+mod reasonix_settings;
 mod registry;
 mod targets;
 mod types;
@@ -246,6 +247,17 @@ const GROK_HOOK_INSTALL_NAME: &str = "herdr-agent-state.sh";
 const GROK_HOOK_CONFIG_INSTALL_NAME: &str = "herdr.json";
 const GROK_HOOK_ASSET: &str = include_str!("assets/grok/herdr-agent-state.sh");
 const GROK_INTEGRATION_VERSION: u32 = 1;
+const REASONIX_HOOK_INSTALL_NAME: &str = if cfg!(windows) {
+    "herdr-agent-state.ps1"
+} else {
+    "herdr-agent-state.sh"
+};
+const REASONIX_HOOK_ASSET: &str = if cfg!(windows) {
+    include_str!("assets/reasonix/herdr-agent-state.ps1")
+} else {
+    include_str!("assets/reasonix/herdr-agent-state.sh")
+};
+const REASONIX_INTEGRATION_VERSION: u32 = 1;
 
 pub(crate) const INSTALL_WARNING_PREFIX: &str = "warning:";
 

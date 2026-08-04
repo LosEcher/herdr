@@ -105,6 +105,7 @@ fn clear_integration_path_env() {
     std::env::remove_var(ANTIGRAVITY_CLI_CONFIG_DIR_ENV_VAR);
     std::env::remove_var(GROK_CONFIG_DIR_ENV_VAR);
     std::env::remove_var(GROK_HOME_ENV_VAR);
+    std::env::remove_var(REASONIX_HOME_ENV_VAR);
 }
 
 fn kimi_hook_command(hook_path: &Path, action: &str) -> String {
@@ -3967,6 +3968,147 @@ fn grok_dir_honors_grok_home_after_config_dir_seam() {
     );
 
     std::env::remove_var(GROK_HOME_ENV_VAR);
+    clear_integration_path_env();
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn reasonix_v1_integration_status_is_current() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let reasonix_home = base.join("reasonix-home");
+    fs::create_dir_all(&reasonix_home).unwrap();
+    std::env::set_var(REASONIX_HOME_ENV_VAR, &reasonix_home);
+    install_reasonix().unwrap();
+
+    let statuses = installed_integration_statuses();
+    let reasonix = statuses
+        .iter()
+        .find(|status| status.target == crate::api::schema::IntegrationTarget::Reasonix)
+        .expect("reasonix integration status");
+    assert_eq!(reasonix.state, IntegrationStatusKind::Current);
+    assert_eq!(reasonix.installed_version, Some(REASONIX_INTEGRATION_VERSION));
+
+    clear_integration_path_env();
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn install_reasonix_merges_hooks_into_settings_json() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let reasonix_home = base.join("reasonix-home");
+    fs::create_dir_all(&reasonix_home).unwrap();
+    std::env::set_var(REASONIX_HOME_ENV_VAR, &reasonix_home);
+
+    // A pre-existing user settings.json with its own hooks must be preserved.
+    fs::write(
+        reasonix_home.join("settings.json"),
+        r#"{"telemetry":"off","hooks":{"PreToolUse":[{"command":"echo user-hook","timeout":100}]}}"#,
+    )
+    .unwrap();
+
+    let installed = install_reasonix().unwrap();
+    assert!(installed.hook_path.is_file());
+    assert_eq!(
+        installed.hook_path,
+        reasonix_home.join("hooks").join(REASONIX_HOOK_INSTALL_NAME)
+    );
+    assert_eq!(installed.settings_path, reasonix_home.join("settings.json"));
+
+    let settings: Value =
+        serde_json::from_str(&fs::read_to_string(&installed.settings_path).unwrap()).unwrap();
+    assert_eq!(settings["telemetry"], "off");
+    let hooks = settings["hooks"].as_object().unwrap();
+    let pre_tool = hooks["PreToolUse"].as_array().unwrap();
+    assert!(
+        pre_tool
+            .iter()
+            .any(|entry| entry["command"] == "echo user-hook"),
+        "user hooks must be preserved"
+    );
+    assert!(
+        pre_tool.iter().any(|entry| {
+            let command = entry["command"].as_str().unwrap();
+            command.contains("herdr-agent-state.sh") && command.contains("working")
+        }),
+        "herdr working hook must be present"
+    );
+    for (event, _) in super::reasonix_settings::hook_events_for_test() {
+        assert!(hooks[*event].is_array(), "missing event {event}");
+    }
+
+    clear_integration_path_env();
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn uninstall_reasonix_removes_only_herdr_hooks() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let reasonix_home = base.join("reasonix-home");
+    fs::create_dir_all(&reasonix_home).unwrap();
+    std::env::set_var(REASONIX_HOME_ENV_VAR, &reasonix_home);
+    install_reasonix().unwrap();
+
+    // The user adds a hook after install; uninstall must keep it.
+    let settings_path = reasonix_home.join("settings.json");
+    let mut settings: Value = serde_json::from_str(&fs::read_to_string(&settings_path).unwrap())
+        .unwrap();
+    settings["hooks"]["Stop"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"command": "echo user-stop"}));
+    fs::write(
+        &settings_path,
+        serde_json::to_string_pretty(&settings).unwrap(),
+    )
+    .unwrap();
+
+    let result = uninstall_reasonix().unwrap();
+    assert!(result.removed_hook_file);
+    assert!(result.updated_settings);
+    assert!(!result.hook_path.exists());
+
+    let settings: Value =
+        serde_json::from_str(&fs::read_to_string(&settings_path).unwrap()).unwrap();
+    let hooks = settings["hooks"].as_object().unwrap();
+    assert_eq!(
+        hooks["Stop"].as_array().unwrap().len(),
+        1,
+        "user stop hook must survive"
+    );
+    assert_eq!(hooks["Stop"][0]["command"], "echo user-stop");
+    for (event, _) in super::reasonix_settings::hook_events_for_test() {
+        assert!(
+            !hooks
+                .get(*event)
+                .and_then(Value::as_array)
+                .is_some_and(|entries| entries
+                    .iter()
+                    .any(|entry| entry["command"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .contains("herdr-agent-state"))),
+            "herdr hook must be removed from {event}"
+        );
+    }
+
+    clear_integration_path_env();
+    let _ = fs::remove_dir_all(base);
+}
+
+#[test]
+fn install_reasonix_errors_when_dir_missing() {
+    let _lock = integration_env_lock();
+    let base = unique_base();
+    let reasonix_home = base.join("reasonix-home");
+    std::env::set_var(REASONIX_HOME_ENV_VAR, &reasonix_home);
+
+    let err = install_reasonix().unwrap_err();
+    assert!(err.to_string().contains("install reasonix first"));
+    assert!(!reasonix_home.exists(), "install must not create the config dir");
+
     clear_integration_path_env();
     let _ = fs::remove_dir_all(base);
 }

@@ -131,6 +131,7 @@ fn parse_integration_target(
         "mastracode" => IntegrationTarget::Mastracode,
         "antigravity-cli" | "antigravity_cli" => IntegrationTarget::AntigravityCli,
         "grok" => IntegrationTarget::Grok,
+        "reasonix" => IntegrationTarget::Reasonix,
         _ => {
             eprintln!("unknown integration target: {target}");
             eprintln!(

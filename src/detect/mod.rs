@@ -62,10 +62,11 @@ pub enum Agent {
     Kilo,
     Qodercli,
     Maki,
+    Reasonix,
 }
 
 impl Agent {
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 22] = [
         Self::Pi,
         Self::Claude,
         Self::Codex,
@@ -87,9 +88,10 @@ impl Agent {
         Self::Kilo,
         Self::Qodercli,
         Self::Maki,
+        Self::Reasonix,
     ];
 
-    pub const SCREEN_MANIFEST_AGENTS: [Self; 19] = [
+    pub const SCREEN_MANIFEST_AGENTS: [Self; 20] = [
         Self::Pi,
         Self::Claude,
         Self::Codex,
@@ -109,6 +111,7 @@ impl Agent {
         Self::Kilo,
         Self::Qodercli,
         Self::Maki,
+        Self::Reasonix,
     ];
 }
 
@@ -135,6 +138,7 @@ pub fn agent_label(agent: Agent) -> &'static str {
         Agent::Kilo => "kilo",
         Agent::Qodercli => "qodercli",
         Agent::Maki => "maki",
+        Agent::Reasonix => "reasonix",
     }
 }
 
@@ -161,6 +165,7 @@ pub fn interactive_agent_executable(agent: Agent) -> &'static str {
         Agent::Kilo => "kilo",
         Agent::Qodercli => "qodercli",
         Agent::Maki => "maki",
+        Agent::Reasonix => "reasonix",
     }
 }
 
@@ -197,6 +202,7 @@ fn lookup_agent(name: &str) -> Option<Agent> {
         "kilo" | "kilo-code" | "kilo code" => Some(Agent::Kilo),
         "qodercli" | "qoderclicn" | "qoder" | "qodercn" => Some(Agent::Qodercli),
         "maki" => Some(Agent::Maki),
+        "reasonix" => Some(Agent::Reasonix),
         _ => None,
     }
 }
@@ -289,6 +295,7 @@ pub(crate) fn full_lifecycle_hook_authority(source: &str, agent_label: &str) -> 
             | ("herdr:opencode", "opencode")
             | ("herdr:kilo", "kilo")
             | ("herdr:kimi", "kimi")
+            | ("herdr:reasonix", "reasonix")
     )
 }
 
@@ -751,6 +758,7 @@ mod tests {
             (Agent::Kilo, "kilo"),
             (Agent::Qodercli, "qodercli"),
             (Agent::Maki, "maki"),
+            (Agent::Reasonix, "reasonix"),
         ];
         assert_eq!(expected.len(), Agent::ALL.len());
         for (agent, executable) in expected {

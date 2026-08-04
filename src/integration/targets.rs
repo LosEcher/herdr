@@ -18,7 +18,7 @@ use super::config_edit::{
 use super::env::{
     antigravity_cli_dir, claude_dir, codex_dir, copilot_dir, cursor_dir, devin_dir, droid_dir,
     grok_dir, hermes_dir, hermes_plugin_dir, kilo_dir, kimi_dir, mastracode_dir, omp_extension_dir,
-    opencode_dir, pi_extension_dir, qodercli_dir,
+    opencode_dir, pi_extension_dir, qodercli_dir, reasonix_dir,
 };
 use super::file_ops::{
     make_executable, remove_dir_all_if_exists, remove_file_if_exists, remove_legacy_bash_hook_file,
@@ -32,6 +32,7 @@ use super::types::{
     KiloUninstallResult, KimiInstallPaths, KimiUninstallResult, MastracodeInstallPaths,
     MastracodeUninstallResult, OmpInstallPaths, OmpUninstallResult, OpenCodeInstallPaths,
     OpenCodeUninstallResult, PiUninstallResult, QodercliInstallPaths, QodercliUninstallResult,
+    ReasonixInstallPaths, ReasonixUninstallResult,
 };
 use super::{
     ANTIGRAVITY_CLI_HOOK_ASSET, ANTIGRAVITY_CLI_HOOK_BLOCK_NAME, ANTIGRAVITY_CLI_HOOK_EVENTS,
@@ -49,7 +50,7 @@ use super::{
     OMP_EXTENSION_ASSET, OMP_EXTENSION_INSTALL_NAME, OPENCODE_PLUGIN_ASSET,
     OPENCODE_PLUGIN_INSTALL_NAME, PI_EXTENSION_ASSET, PI_EXTENSION_INSTALL_NAME,
     QODERCLI_HOOK_ASSET, QODERCLI_HOOK_EVENTS, QODERCLI_HOOK_INSTALL_NAME,
-    QODERCLI_REMOVED_LIFECYCLE_HOOK_EVENTS,
+    QODERCLI_REMOVED_LIFECYCLE_HOOK_EVENTS, REASONIX_HOOK_ASSET, REASONIX_HOOK_INSTALL_NAME,
 };
 
 fn ensure_extension_dir(dir: &Path, agent: &str) -> io::Result<()> {
@@ -1317,5 +1318,68 @@ pub(crate) fn uninstall_grok() -> io::Result<GrokUninstallResult> {
         config_path,
         removed_hook_file,
         removed_config_file,
+    })
+}
+
+pub(crate) fn install_reasonix() -> io::Result<ReasonixInstallPaths> {
+    let dir = reasonix_dir()?;
+    if !dir.is_dir() {
+        return Err(io::Error::other(format!(
+            "reasonix config directory not found at {}. install reasonix first",
+            dir.display()
+        )));
+    }
+
+    // reasonix reads hooks from a single global <Reasonix home>/settings.json,
+    // so herdr merges its entries into it instead of owning a dedicated file.
+    // The hook script itself lives under hooks/ next to the settings.
+    let hooks_dir = dir.join("hooks");
+    fs::create_dir_all(&hooks_dir)?;
+
+    let hook_path = hooks_dir.join(REASONIX_HOOK_INSTALL_NAME);
+    fs::write(&hook_path, REASONIX_HOOK_ASSET)?;
+    make_executable(&hook_path)?;
+
+    let settings_path = dir.join("settings.json");
+    let existing_settings = if settings_path.is_file() {
+        fs::read_to_string(&settings_path)?
+    } else {
+        "{}".to_string()
+    };
+    let updated_settings =
+        super::reasonix_settings::install(&existing_settings, &settings_path, &hook_path)?;
+    if updated_settings != existing_settings {
+        fs::write(&settings_path, updated_settings)?;
+    }
+
+    Ok(ReasonixInstallPaths {
+        hook_path,
+        settings_path,
+    })
+}
+
+pub(crate) fn uninstall_reasonix() -> io::Result<ReasonixUninstallResult> {
+    let dir = reasonix_dir()?;
+    let hooks_dir = dir.join("hooks");
+    let hook_path = hooks_dir.join(REASONIX_HOOK_INSTALL_NAME);
+    let settings_path = dir.join("settings.json");
+
+    let mut updated_settings = false;
+    if settings_path.is_file() {
+        let existing_settings = fs::read_to_string(&settings_path)?;
+        let updated =
+            super::reasonix_settings::uninstall(&existing_settings, &settings_path, &hook_path)?;
+        if updated != existing_settings {
+            fs::write(&settings_path, updated)?;
+            updated_settings = true;
+        }
+    }
+    let removed_hook_file = remove_file_if_exists(&hook_path)?;
+
+    Ok(ReasonixUninstallResult {
+        hook_path,
+        settings_path,
+        removed_hook_file,
+        updated_settings,
     })
 }

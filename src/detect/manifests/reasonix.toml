@@ -1,0 +1,71 @@
+id = "reasonix"
+version = "2026.08.04.1"
+min_engine_version = 1
+updated_at = "2026-08-04T00:00:00Z"
+aliases = ["reasonix-cli"]
+
+# Tool approval panel: footer hints while a permission-gated tool call awaits
+# approval (en: "1 approve once · 2 allow scope this session …", zh: "1 本次允许 · …").
+[[rules]]
+id = "tool_approval_panel"
+state = "blocked"
+priority = 400
+region = "whole_recent"
+visible_blocker = true
+any = [
+  { all = [{ contains = ["1 approve once"] }, { contains = ["allow scope this session"] }] },
+  { all = [{ contains = ["1 本次允许"] }, { contains = ["本会话允许此范围"] }] },
+]
+
+# Plan approval panel: footer hints while a plan awaits approval
+# (en: "1 execute · 2 revise · 3 exit without executing …", zh: "1 开始执行 · 2 修改计划 · …").
+[[rules]]
+id = "plan_approval_panel"
+state = "blocked"
+priority = 390
+region = "whole_recent"
+visible_blocker = true
+any = [
+  { contains = ["1 execute", "2 revise", "exit without executing"] },
+  { contains = ["1 开始执行", "2 修改计划"] },
+]
+
+# Question card: user-facing question with number-pick choices
+# (en: "↑/↓ move · number to pick · space multi · Enter confirm", zh: "↑/↓ 选 · …").
+[[rules]]
+id = "question_panel"
+state = "blocked"
+priority = 380
+region = "whole_recent"
+visible_blocker = true
+any = [
+  { contains = ["↑/↓ move", "number to pick", "Enter confirm"] },
+  { contains = ["↑/↓ 选"] },
+  { contains = ["↑/↓ 選"] },
+]
+
+# Working: braille spinner row with thinking/working/retrying label
+# (en: "⠋ thinking… (12s · Esc cancels)", zh: "⠋ 思考中… (12 秒 · Esc 取消)").
+[[rules]]
+id = "braille_spinner_working"
+state = "working"
+priority = 100
+region = "whole_recent"
+visible_working = true
+line_regex = ['(?i)^\s*[\u2800-\u28FF]+\s*(thinking|思考|working|工作中|retrying)']
+any = [
+  { line_regex = ['(?i)esc cancels'] },
+  { line_regex = ['(?i)esc 取消'] },
+]
+
+# Idle: persistent footer shows mode tag + "ready"/"就绪" + shortcut hints
+# (row 1), the YOLO hint (row 2) and the model/work-mode row (row 3).
+[[rules]]
+id = "idle_footer"
+state = "idle"
+priority = 50
+region = "bottom_non_empty_lines(3)"
+any = [
+  { all = [{ contains = ["ready"] }, { contains = ["Shift+Tab"] }] },
+  { all = [{ contains = ["就绪"] }, { contains = ["Shift+Tab"] }] },
+]

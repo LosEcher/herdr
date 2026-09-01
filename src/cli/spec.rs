@@ -8,7 +8,6 @@ pub(super) fn command() -> Command {
         .disable_help_flag(true)
         .disable_version_flag(true)
         .arg(help_flag())
-        .arg(flag("no-session").help("Run monolithically without server/client session mode"))
         .arg(option("session", "NAME").help("Use or create a named persistent session"))
         .arg(option("remote", "TARGET").help("Attach through SSH to a remote Herdr server"))
         .arg(
@@ -239,7 +238,8 @@ fn worktree_command() -> Command {
             Command::new("list")
                 .about("List worktree workspaces")
                 .arg(option("workspace", "ID"))
-                .arg(path_option("cwd", "PATH")),
+                .arg(path_option("cwd", "PATH"))
+                .arg(flag("trust-repository")),
         )
         .subcommand(
             Command::new("create")
@@ -251,7 +251,8 @@ fn worktree_command() -> Command {
                 .arg(path_option("path", "PATH"))
                 .arg(option("label", "TEXT"))
                 .arg(flag("focus"))
-                .arg(flag("no-focus")),
+                .arg(flag("no-focus"))
+                .arg(flag("trust-repository")),
         )
         .subcommand(
             Command::new("open")
@@ -262,13 +263,15 @@ fn worktree_command() -> Command {
                 .arg(option("branch", "NAME"))
                 .arg(option("label", "TEXT"))
                 .arg(flag("focus"))
-                .arg(flag("no-focus")),
+                .arg(flag("no-focus"))
+                .arg(flag("trust-repository")),
         )
         .subcommand(
             Command::new("remove")
                 .about("Remove a worktree checkout")
                 .arg(option("workspace", "ID"))
-                .arg(flag("force")),
+                .arg(flag("force"))
+                .arg(flag("trust-repository")),
         )
 }
 

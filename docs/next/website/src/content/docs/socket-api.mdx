@@ -191,8 +191,8 @@ layers are placed in stable `(z_index, layer_id)` order. Each stream exclusively
 closing it removes that layer. Inline frames accept `png`, `rgb`, `rgba`, or
 `bgra`; BGRA is normalized once to owned RGBA. Herdr advances the host cache
 one image transaction per render pass, so arbitrary layer sets progress without
-an aggregate frame. Headless transport keeps each transaction within its 32 MiB
-wire limit; local monolithic rendering does not apply that transport limit.
+an aggregate frame. Client transport keeps each transaction within its 32 MiB
+wire limit.
 
 ```json
 {"id":"graphics_info","method":"pane.graphics.info","params":{"pane_id":"w1:p1"}}
@@ -219,8 +219,8 @@ inline. Herdr replies with a `pane_graphics_frame_ack` only after the terminal
 accepts the file, or after a safe owned inline fallback is installed. Confirmed
 file-transport failure disables direct files for that client connection without
 disabling exact pixel mouse. A timeout or client loss closes the stream without
-acknowledging source reuse. Monolithic `--no-session` mode advertises neither
-fast file transport nor exact pixel mouse and remains on owned inline fallback.
+acknowledging source reuse. Clients that cannot negotiate direct file transport
+remain on the owned inline fallback.
 
 Direct files are always complete canonical `width * height * 4` RGBA frames.
 `file_frame_max_bytes` is the limit that remains eligible for owned inline fallback.
@@ -411,6 +411,8 @@ Remove a linked checkout:
 Use at most one of `workspace_id` or `cwd` for `worktree.list`, `worktree.create`, and `worktree.open`; omit both to use the active workspace. Use exactly one of `path` or `branch` for `worktree.open`. Raw socket `cwd` and `path` values must be absolute; the CLI expands relative `--cwd` and `--path` values before sending requests. Workspace responses include optional `worktree` provenance when a workspace belongs to a Herdr worktree group. Worktree commands can emit `workspace.updated` when an existing workspace gains or changes worktree provenance.
 
 Worktree commands also emit lifecycle events. `worktree.create` emits `workspace.created`, `tab.created`, `pane.created`, and `worktree.created`. `worktree.open` emits `worktree.opened`, and it also emits workspace/tab/pane creation events when it opens a new Herdr workspace. `worktree.remove` emits `worktree.removed`; if the linked workspace is still open, it also emits `workspace.closed`.
+
+`workspace.close` rejects closing a primary workspace while linked-worktree workspaces are open unless its params include `"close_group": true`, returning `workspace_group_close_required` when explicit group intent is missing. An explicit group close emits one `workspace.closed` event for each workspace it closes.
 
 ## Agent view queries
 
